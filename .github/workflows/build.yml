@@ -1,0 +1,49 @@
+
+name: Build Video Timer Chemical
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Gradle
+        run: |
+          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          echo "/tmp/gradle-8.9/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Extract project ZIP
+        run: |
+          mkdir extracted
+          ZIP=$(find . -maxdepth 1 -iname '*.zip' | head -n 1)
+          test -n "$ZIP"
+          unzip -q "$ZIP" -d extracted
+          PROJECT=$(dirname "$(find extracted -name settings.gradle -print -quit)")
+          test -n "$PROJECT"
+          cp -a "$PROJECT"/. .
+
+      - name: Build APK
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: VideoTimerChemical-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
